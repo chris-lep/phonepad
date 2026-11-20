@@ -81,7 +81,7 @@ class Registry:
 
     def __init__(self, state_dir: Path, clock: Callable[[], float] = time.time) -> None:
         self._devices = JsonFile(state_dir / "devices.json", lambda: {"devices": []})
-        self._pairing = JsonFile(state_dir / "pairing.json", dict)
+        self._pairing = JsonFile(state_dir / "pairing.json", dict, strict=False)
         self._clock = clock
 
     # --- devices -------------------------------------------------------------------------
@@ -152,8 +152,14 @@ class Registry:
         data = self._pairing.read()
         return bool(isinstance(data, dict) and data.get("expires_at", 0) > self._clock())
 
-    def complete_pairing(self, code: str, name: str) -> tuple[Device, str] | None:
-        """Exchange a valid code for a new device and its token; None if the code is wrong."""
+    def complete_pairing(
+        self, code: str, name: str, replaces: str = ""
+    ) -> tuple[Device, str] | None:
+        """Exchange a valid code for a new device and its token; None if the code is wrong.
+
+        `replaces` is the phone's previous token, if any: that device entry is removed, so
+        re-pairing a phone does not leave stale entries behind.
+        """
         now = self._clock()
 
         def check(data: dict[str, Any]) -> bool:
@@ -186,8 +192,16 @@ class Registry:
             last_used=_iso(now),
         )
 
+        old_hash = _hash(replaces) if replaces else None
+
         def add(data: dict[str, Any]) -> None:
-            data["devices"] = [*_device_list(data), asdict(device)]
+            kept = [
+                item
+                for item in _device_list(data)
+                if old_hash is None
+                or not hmac.compare_digest(str(item.get("token_hash")), old_hash)
+            ]
+            data["devices"] = [*kept, asdict(device)]
 
         self._devices.update(add)
         return device, token

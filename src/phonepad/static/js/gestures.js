@@ -26,7 +26,6 @@ export class GestureRecognizer {
 
   /** Fingers touched down. `touches`: all fingers now on the pad. */
   start(touches, t) {
-    const actions = [];
     const o = this.options;
     if (this.gesture === null) {
       this.gesture = {
@@ -34,20 +33,20 @@ export class GestureRecognizer {
         lastMove: t,
         maxTouches: 0,
         moved: false,
+        // Touched again right after a tap: becomes a drag once the finger moves (the button
+        // goes down only then, so a second finger can still make it a right click).
+        dragPending: o.tapDrag && touches.length === 1 && t - this.lastTapEnd <= o.dragWindowMs,
         drag: false,
         travelX: 0,
         travelY: 0,
       };
-      if (o.tapDrag && touches.length === 1 && t - this.lastTapEnd <= o.dragWindowMs) {
-        this.gesture.drag = true;
-        actions.push({ type: "button", button: "left", action: "down" });
-      }
     }
     for (const touch of touches) {
       if (!this.touches.has(touch.id)) this.touches.set(touch.id, { x: touch.x, y: touch.y });
     }
     this.gesture.maxTouches = Math.max(this.gesture.maxTouches, this.touches.size);
-    return actions;
+    if (this.gesture.maxTouches > 1) this.gesture.dragPending = false;
+    return [];
   }
 
   /** Fingers moved. `touches`: all fingers now on the pad. */
@@ -83,6 +82,11 @@ export class GestureRecognizer {
       g.travelY += dy;
       if (Math.hypot(g.travelX, g.travelY) <= this.options.slop) return [];
       g.moved = true;
+      if (kind === "move" && g.dragPending) {
+        g.dragPending = false;
+        g.drag = true;
+        return [{ type: "button", button: "left", action: "down" }];
+      }
       return []; // movement inside the slop is dropped so taps never nudge the pointer
     }
     return kind === "move" ? [{ type: "move", dx, dy, dt }] : [{ type: "scroll", dx, dy }];
@@ -109,11 +113,7 @@ export class GestureRecognizer {
 
     this.gesture = null;
     const isTap = !cancelled && !g.moved && t - g.start <= this.options.tapMaxMs;
-    if (g.drag) {
-      // Down was sent when the touch began: a short touch turns it into a (double) click.
-      if (isTap) this.lastTapEnd = t;
-      return [{ type: "button", button: "left", action: "up" }];
-    }
+    if (g.drag) return [{ type: "button", button: "left", action: "up" }];
     if (!isTap) return [];
     if (g.maxTouches === 1) {
       this.lastTapEnd = t;

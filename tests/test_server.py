@@ -296,3 +296,105 @@ async def test_listens_on_trusted_networks_only(tmp_path: Path, recorder: Record
         assert set(srv.sites) == {"127.0.0.1"}
     finally:
         await srv.stop()
+
+
+# --- review fixes ------------------------------------------------------------------------------
+
+
+async def test_unknown_host_is_refused(client: TestClient[Any, Any]) -> None:
+    """DNS rebinding: a foreign name pointing at the laptop must not reach the app."""
+    resp = await client.get("/", headers={"Host": "evil.example:8790"})
+    assert resp.status == 421
+    assert (await client.get("/", headers={"Host": "localhost"})).status == 200
+
+
+async def test_ping_is_answered(server: PhonepadServer, client: TestClient[Any, Any]) -> None:
+    ws = await connect(client, paired_token(server))
+    await ws.send_json({"type": "ping"})
+    assert await ws.receive_json() == {"type": "pong"}
+    await ws.close()
+
+
+async def test_too_many_unauthenticated_connections_are_refused(
+    client: TestClient[Any, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("phonepad.server.MAX_PENDING_AUTH", 1)
+    first = await client.ws_connect("/ws")  # never authenticates
+    resp = await client.get(
+        "/ws",
+        headers={
+            "Connection": "Upgrade",
+            "Upgrade": "websocket",
+            "Sec-WebSocket-Version": "13",
+            "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+        },
+    )
+    assert resp.status == 503
+    await first.close()
+
+
+async def test_repairing_over_websocket_replaces_the_old_device(
+    server: PhonepadServer, client: TestClient[Any, Any]
+) -> None:
+    old = paired_token(server)
+    code = server.registry.start_pairing().code
+    ws = await client.ws_connect("/ws")
+    await ws.send_json({"type": "pair", "v": 1, "code": code, "name": "iPhone", "replaces": old})
+    assert (await ws.receive_json())["type"] == "paired"
+    await ws.close()
+    assert [d.name for d in server.registry.devices()] == ["iPhone"]
+
+
+async def test_unreadable_device_list_does_not_unpair_anyone(
+    server: PhonepadServer, client: TestClient[Any, Any], tmp_path: Path
+) -> None:
+    ws = await connect(client, paired_token(server))
+    await until(lambda: len(server.sessions) == 1)
+    (tmp_path / "state" / "devices.json").write_text("{broken")
+    await server._close_revoked()
+    assert len(server.sessions) == 1  # still connected
+    other = await client.ws_connect("/ws")
+    await other.send_json({"type": "hello", "v": 1, "token": "x"})
+    assert (await other.receive_json())["code"] == "server_error"
+    await ws.close()
+
+
+async def test_short_networkmanager_hiccups_keep_the_lan_listeners(
+    tmp_path: Path, recorder: Recorder
+) -> None:
+    from phonepad.network import NetworkError
+
+    class FlakySource(FakeSource):
+        failing = False
+
+        async def active_connections(self) -> list[Connection]:
+            if self.failing:
+                raise NetworkError("NetworkManager restarting")
+            return self.active
+
+    source = FlakySource()
+    home = Connection("uuid-home", "Home", "802-11-wireless", "wlan0")
+    source.active, source.addresses = [home], {"wlan0": ["127.0.0.3"]}
+    inputs = InputService(lambda: RecordingPointer(recorder), lambda: RecordingKeyboard(recorder))
+    srv = PhonepadServer(
+        port=0,
+        registry=Registry(tmp_path),
+        trust=TrustStore(tmp_path),
+        network=source,
+        inputs=inputs,
+    )
+    srv.trust.add(home)
+    await srv.start()
+    try:
+        assert "127.0.0.3" in srv.sites
+        source.failing = True
+        await srv._reconcile()
+        await srv._reconcile()
+        assert "127.0.0.3" in srv.sites  # tolerated
+        await srv._reconcile()
+        assert "127.0.0.3" not in srv.sites  # then fail closed
+        source.failing = False
+        await srv._reconcile()
+        assert "127.0.0.3" in srv.sites
+    finally:
+        await srv.stop()

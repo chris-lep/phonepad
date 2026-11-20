@@ -36,46 +36,60 @@ describe("one finger", () => {
 });
 
 describe("tap and drag", () => {
-  test("tap, then touch again soon and move: drag", () => {
+  test("tap, then touch again soon and move: drag (button goes down on the move)", () => {
     const g = new GestureRecognizer();
     g.start(one(0, 0), 0);
     assert.deepEqual(g.end([], 100), [click("left")]);
-    assert.deepEqual(g.start(one(0, 0, 2), 250), [down]);
-    g.move(one(20, 0, 2), 270);
+    assert.deepEqual(g.start(one(0, 0, 2), 250), []);
+    assert.deepEqual(g.move(one(20, 0, 2), 270), [down]);
     assert.deepEqual(g.move(one(30, 0, 2), 286), [{ type: "move", dx: 10, dy: 0, dt: 16 }]);
     assert.deepEqual(g.end([], 600), [up]);
   });
 
-  test("a quick second tap is down + up (double click), a third continues", () => {
+  test("a quick second and third tap are clicks (double and triple click)", () => {
     const g = new GestureRecognizer();
     g.start(one(0, 0), 0);
     g.end([], 80);
-    assert.deepEqual(g.start(one(0, 0), 200), [down]);
-    assert.deepEqual(g.end([], 260), [up]);
-    assert.deepEqual(g.start(one(0, 0), 400), [down]);
-    assert.deepEqual(g.end([], 450), [up]);
+    assert.deepEqual(g.start(one(0, 0), 200), []);
+    assert.deepEqual(g.end([], 260), [click("left")]);
+    assert.deepEqual(g.start(one(0, 0), 400), []);
+    assert.deepEqual(g.end([], 450), [click("left")]);
   });
 
-  test("touching again too late is a new gesture", () => {
+  test("tap, then a quick two-finger tap is a right click (no double click)", () => {
+    const g = new GestureRecognizer();
+    g.start(one(0, 0), 0);
+    assert.deepEqual(g.end([], 80), [click("left")]);
+    assert.deepEqual(g.start(one(0, 0), 150), []);
+    assert.deepEqual(g.start(two(0, 0, 40, 0), 158), []);
+    g.end(one(0, 0), 220);
+    assert.deepEqual(g.end([], 225), [click("right")]);
+  });
+
+  test("touching again too late moves instead of dragging", () => {
     const g = new GestureRecognizer();
     g.start(one(0, 0), 0);
     g.end([], 80);
-    assert.deepEqual(g.start(one(0, 0), 400), []);
+    g.start(one(0, 0), 400);
+    assert.deepEqual(g.move(one(20, 0), 420), []);
+    assert.equal(g.move(one(30, 0), 436)[0].type, "move");
   });
 
   test("can be switched off", () => {
     const g = new GestureRecognizer({ tapDrag: false });
     g.start(one(0, 0), 0);
     g.end([], 80);
-    assert.deepEqual(g.start(one(0, 0), 150), []);
-    assert.deepEqual(g.end([], 200), [click("left")]);
+    g.start(one(0, 0), 150);
+    assert.deepEqual(g.move(one(20, 0), 170), []);
+    assert.equal(g.move(one(30, 0), 186)[0].type, "move");
   });
 
-  test("cancel releases the button", () => {
+  test("cancel releases a drag", () => {
     const g = new GestureRecognizer();
     g.start(one(0, 0), 0);
     g.end([], 80);
     g.start(one(0, 0), 150);
+    g.move(one(20, 0), 170);
     assert.deepEqual(g.cancel(300), [up]);
   });
 });

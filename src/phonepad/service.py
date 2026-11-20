@@ -24,17 +24,27 @@ def unit_text(python: str) -> str:
     exec_start = " ".join(_quote(a) for a in (python, "-m", "phonepad", "serve"))
     return f"""\
 # Written by `phonepad service install`; remove with `phonepad service uninstall`.
-# Started at login by ~/.config/autostart/{AUTOSTART_NAME}, so it inherits the session's
-# DISPLAY and XAUTHORITY (see docs/decisions/0006-*.md).
+# Started at login by ~/.config/autostart/{AUTOSTART_NAME}, which first imports DISPLAY and
+# XAUTHORITY into the systemd user manager (see docs/decisions/0006-*.md).
 [Unit]
 Description=phonepad: iPhone touchpad and keyboard server
+StartLimitIntervalSec=120
+StartLimitBurst=5
 
 [Service]
 Type=simple
 ExecStart={exec_start}
 Restart=on-failure
 RestartSec=3
+# Exit status 2: bad settings or port in use; restarting would not help.
+RestartPreventExitStatus=2
 """
+
+
+AUTOSTART_EXEC = (
+    'sh -c "systemctl --user import-environment DISPLAY XAUTHORITY; '
+    f'systemctl --user start {UNIT_NAME}"'
+)
 
 
 def autostart_text() -> str:
@@ -43,7 +53,7 @@ def autostart_text() -> str:
 Type=Application
 Name=phonepad
 Comment=Start the phonepad server (iPhone touchpad and keyboard)
-Exec=systemctl --user start {UNIT_NAME}
+Exec={AUTOSTART_EXEC}
 X-GNOME-Autostart-enabled=true
 """
 

@@ -48,7 +48,7 @@ class UinputPointer:
         }
         self._wheel = NotchAccumulator()
         self._hwheel = NotchAccumulator()
-        self._tuned = False
+        self._tune_attempted = False
 
     def move(self, dx: int, dy: int) -> None:
         e = self._e
@@ -75,8 +75,11 @@ class UinputPointer:
         self._dev.syn()
 
     def prepare_session(self) -> None:
-        # The X server picks up the device asynchronously after creation; wait on first use.
-        self._tuned = tune_pointer(DEVICE_NAME, wait=0.0 if self._tuned else 3.0) or self._tuned
+        # The X server picks up the device asynchronously after creation, so the first call
+        # may wait for it; later calls never block the input thread.
+        wait = 0.0 if self._tune_attempted else 3.0
+        self._tune_attempted = True
+        tune_pointer(DEVICE_NAME, wait=wait)
 
     def close(self) -> None:
         self._dev.close()

@@ -36,3 +36,14 @@ matter. Both sit behind the `PointerBackend` / `KeyboardBackend` protocols in
   already inject input through XTest, so the risk does not grow in practice.
 - Bad, because remapping keycodes sends MappingNotify to all X clients. Spare keycodes are
   cached (least recently used first), so remaps happen only for new characters.
+
+### Changes after review (2026-11-20)
+
+- Remapping a keycode that clients have not processed yet garbled bursts of more distinct
+  characters than spare keycodes (found in review with Xephyr). A keycode pressed less than
+  100 ms ago is now remapped only after that wait.
+- Claimed keycodes are recorded in `keymap.json`, so leftovers from a crash are reclaimed.
+  Guessing leftovers from the keymap's shape was rejected: real keys such as BackSpace and the
+  F-keys have the same repeated keysym in their first columns.
+- Not done yet: typing characters that the active layout already has through their own
+  keycodes (needs the active XKB group); that would avoid most remaps.

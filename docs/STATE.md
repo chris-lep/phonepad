@@ -6,8 +6,11 @@ _Last updated: 2026-11-20_
 
 - v0.1.0 has been built: touchpad (move, tap, tap-and-drag, two-finger scroll and right-click,
   L/R buttons), live typing with special keys, pairing, trusted networks, autostart, doctor.
+- An independent review (2026-11-20) found no way to inject input without a token and 5 major
+  plus 22 minor problems; all are fixed or recorded (see the worklog).
 - Verified by automated tests only: unit tests, an e2e run in headless Chrome with an
-  emulated iPhone, and XTest typing in Xephyr. **Not yet tried on the real iPhone.**
+  emulated iPhone (incl. a server restart), and XTest typing in Xephyr (incl. bursts and crash
+  leftovers). **Not yet tried on the real iPhone.**
 
 ## Next steps
 
@@ -18,8 +21,19 @@ _Last updated: 2026-11-20_
 
 ## Open questions for Christopher
 
+Need the real iPhone to answer:
+
 - Does iOS still auto-capitalise the first letter with the invisible marker in front of the
   text field? If not: accept it, or find another way to detect Backspace on an empty field.
+- Does Return with a pending autocorrection send the corrected word before Enter (50 ms delay)?
+- Does dictation keep running when the field restores the marker?
+- Is the tap-and-drag window (250 ms) comfortable, or does it start drags by accident?
+
+## Backlog (from review, not scheduled)
+
+- Type characters the active layout already has through their own keycodes (needs the XKB
+  group), so most typing causes no keymap changes at all (ADR-0003).
+- Pin trusted networks to the gateway MAC or Wi-Fi BSSID (ADR-0005).
 
 ## Ideas (not scheduled)
 

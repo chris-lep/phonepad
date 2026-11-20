@@ -31,3 +31,13 @@ delay matters.
 - Bad, because IPv6 and mDNS host names (`laptop.local`) are not served yet; the QR code uses
   the IPv4 address, so a changed DHCP lease means a new home-screen bookmark. A DHCP
   reservation in the router avoids that.
+
+### Limits found in review (2026-11-20)
+
+- Trust is per connection profile: a Wi-Fi profile matches any network with the same name and
+  password, and a wired profile matches every wired network (so `phonepad trust` asks for
+  `--yes` there). Pinning the gateway's MAC address or the access point's BSSID would be
+  stricter; not done yet.
+- Linux uses the weak host model: a packet for the trusted address can also arrive on another
+  interface. The ufw rule (source subnet only) is what limits that.
+- One failed `nmcli` check no longer closes the listeners; two in a row are tolerated.

@@ -4,7 +4,10 @@ import json
 import stat
 from pathlib import Path
 
+import pytest
+
 from phonepad.auth import PAIRING_TRIES, PAIRING_TTL, Registry, clean_name
+from phonepad.jsonstore import StateFileError
 from tests.conftest import Clock
 
 
@@ -91,14 +94,36 @@ def test_last_used_is_updated_at_most_once_a_minute(tmp_path: Path, clock: Clock
     assert reg.devices()[0].last_used != first
 
 
-def test_corrupt_files_read_as_empty(tmp_path: Path, clock: Clock) -> None:
+def test_unreadable_device_list_is_an_error_not_empty(tmp_path: Path, clock: Clock) -> None:
     (tmp_path / "devices.json").write_text("{not json")
+    reg = Registry(tmp_path, clock)
+    with pytest.raises(StateFileError):
+        reg.devices()
+    with pytest.raises(StateFileError):  # and it is never overwritten with an empty list
+        reg.complete_pairing(reg.start_pairing().code, "a")
+    assert (tmp_path / "devices.json").read_text() == "{not json"
+
+
+def test_corrupt_pairing_file_reads_as_no_pairing(tmp_path: Path, clock: Clock) -> None:
     (tmp_path / "pairing.json").write_text("[1, 2]")
     reg = Registry(tmp_path, clock)
-    assert reg.devices() == []
     assert not reg.pairing_pending()
     assert reg.complete_pairing(reg.start_pairing().code, "a") is not None
     assert len(json.loads((tmp_path / "devices.json").read_text())["devices"]) == 1
+
+
+def test_repairing_replaces_the_old_device(tmp_path: Path, clock: Clock) -> None:
+    reg = Registry(tmp_path, clock)
+    other, _ = reg.complete_pairing(reg.start_pairing().code, "other") or (None, "")
+    _, old_token = reg.complete_pairing(reg.start_pairing().code, "phone") or (None, "")
+    new, new_token = reg.complete_pairing(reg.start_pairing().code, "phone", old_token) or (
+        None,
+        "",
+    )
+    assert other is not None and new is not None
+    assert {d.id for d in reg.devices()} == {other.id, new.id}
+    assert reg.authenticate(old_token) is None
+    assert reg.authenticate(new_token) is not None
 
 
 def test_clean_name() -> None:

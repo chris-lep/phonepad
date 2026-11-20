@@ -56,6 +56,33 @@ const center = async (selector) => {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 };
 
+/** Start the server (input recorded, loopback only); resolves with its URL. */
+function startServer(port) {
+  server = spawn(
+    PYTHON,
+    ["-m", "phonepad", "serve", "--no-lan", "--port", String(port), "--record-input", recordFile()],
+    { env },
+  );
+  const proc = server;
+  return new Promise((resolve, reject) => {
+    let log = "";
+    proc.stderr.on("data", (chunk) => {
+      log += chunk;
+      const m = /listening on (http:\/\/127\.0\.0\.1:\d+\/)/.exec(log);
+      if (m) resolve(m[1]);
+    });
+    proc.on("exit", (code) => reject(new Error(`server exited (${code}): ${log}`)));
+  });
+}
+
+function stopServer() {
+  const proc = server;
+  return new Promise((resolve) => {
+    proc.on("exit", resolve);
+    proc.kill();
+  });
+}
+
 before(async () => {
   if (skip) return;
   dir = mkdtempSync(join(tmpdir(), "phonepad-e2e-"));
@@ -64,20 +91,7 @@ before(async () => {
     XDG_CONFIG_HOME: join(dir, "config"),
     XDG_STATE_HOME: join(dir, "state"),
   };
-  server = spawn(
-    PYTHON,
-    ["-m", "phonepad", "serve", "--no-lan", "--port", "0", "--record-input", recordFile()],
-    { env },
-  );
-  url = await new Promise((resolve, reject) => {
-    let log = "";
-    server.stderr.on("data", (chunk) => {
-      log += chunk;
-      const m = /listening on (http:\/\/127\.0\.0\.1:\d+\/)/.exec(log);
-      if (m) resolve(m[1]);
-    });
-    server.on("exit", (code) => reject(new Error(`server exited (${code}): ${log}`)));
-  });
+  url = await startServer(0);
   browser = await puppeteer.launch({ executablePath: CHROME, headless: true });
   page = await browser.newPage();
   await page.emulate(KnownDevices["iPhone 13"]);
@@ -112,10 +126,16 @@ test("a wrong code is rejected, the right one pairs", { skip }, async () => {
 });
 
 test("QR link pairs and the code leaves the URL", { skip }, async () => {
+  const deviceIds = () => [...cli("devices").matchAll(/^([0-9a-f]{8}) /gm)].map((m) => m[1]);
+  const [oldId] = deviceIds();
   const code = newPairingCode();
   // Same page, only the fragment changes (QR scanned while the app is open).
   await page.goto(`${url}#code=${code}`);
-  await until(() => cli("devices").match(/iPhone/g)?.length === 2, "second device paired");
+  // The same phone pairs again: its old entry is replaced, not duplicated.
+  await until(() => {
+    const ids = deviceIds();
+    return ids.length === 1 && ids[0] !== oldId;
+  }, "device replaced");
   await until(async () => (await statusText()) === "Connected", "connected via link");
   assert.equal(new URL(page.url()).hash, "");
 });
@@ -180,6 +200,7 @@ test("typing is sent live, Enter and special keys work", { skip }, async () => {
   await page.type("#type-field", "Hä");
   await page.keyboard.press("Backspace");
   await page.keyboard.press("Enter");
+  await until(() => events().length >= before + 4, "Enter (sent after a short delay)");
   const { x, y } = await center('[data-key="tab"]');
   await page.mouse.click(x, y);
   await until(() => events().length >= before + 5, "typing events");
@@ -191,6 +212,30 @@ test("typing is sent live, Enter and special keys work", { skip }, async () => {
     { kind: "key", key: "tab" },
   ]);
   assert.equal(await page.$eval("#type-field", (el) => el.value), "​");
+});
+
+test("text typed during an outage is not sent, and nothing leaks after reconnect", {
+  skip,
+}, async () => {
+  const port = new URL(url).port;
+  await stopServer();
+  await until(async () => (await statusText()) !== "Connected", "noticed the outage");
+  // The keyboard panel is still open from the previous test.
+  await page.type("#type-field", "lost");
+  assert.equal(await page.$eval("#type-field", (el) => el.value), "\u200b");
+  assert.match(await page.$eval("#toast", (el) => el.textContent), /Not connected/);
+
+  url = await startServer(port);
+  await until(async () => (await statusText()) === "Connected", "reconnected", 10000);
+  const before = events().length; // the restarted server truncated the record file
+  await page.type("#type-field", "ok");
+  await page.keyboard.press("Backspace");
+  await until(() => events().length >= before + 3, "typing after reconnect");
+  assert.deepEqual(events().slice(before), [
+    { kind: "text", text: "o" },
+    { kind: "text", text: "k" },
+    { kind: "key", key: "backspace" },
+  ]);
 });
 
 test("the token survives a reload", { skip }, async () => {

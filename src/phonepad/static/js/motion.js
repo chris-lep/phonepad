@@ -2,6 +2,9 @@
 // injected scheduler, unit-tested in tests/js/motion.test.js.
 
 export const WHEEL_NOTCH = 120;
+// Per-message limits of the protocol (phonepad/protocol.py MAX_MOVE, MAX_SCROLL).
+export const MAX_MOVE = 2000;
+export const MAX_SCROLL = 120 * 50;
 const UNITS_PER_PX = 3; // wheel units per CSS px of finger travel at scroll speed 1
 
 /**
@@ -53,6 +56,19 @@ export class Accumulator {
   }
 }
 
+/** Split a delta into pieces within ±limit per axis (empty for no movement). */
+export function split({ dx, dy }, limit) {
+  const parts = [];
+  while (dx || dy) {
+    const px = Math.max(-limit, Math.min(limit, dx));
+    const py = Math.max(-limit, Math.min(limit, dy));
+    parts.push({ dx: px, dy: py });
+    dx -= px;
+    dy -= py;
+  }
+  return parts;
+}
+
 /**
  * Collects pointer and scroll movement and sends it at most once per frame.
  * `send(message)` gets protocol messages; `schedule(fn)` defaults to requestAnimationFrame.
@@ -85,10 +101,10 @@ export class FrameBatcher {
   /** Send what has collected now (also call before clicks and keys to keep the order). */
   flush() {
     this.pending = false;
-    const m = this.move.take();
-    if (m.dx || m.dy) this.send({ type: "move", dx: m.dx, dy: m.dy });
-    const s = this.scroll.take();
-    if (s.dx || s.dy) this.send({ type: "scroll", dx: s.dx, dy: s.dy });
+    for (const part of split(this.move.take(), MAX_MOVE)) this.send({ type: "move", ...part });
+    for (const part of split(this.scroll.take(), MAX_SCROLL)) {
+      this.send({ type: "scroll", ...part });
+    }
   }
 
   /** Drop collected movement (e.g. when the connection is lost). */

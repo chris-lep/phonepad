@@ -3,7 +3,7 @@
 // tests/js/typing.test.js.
 
 /** Invisible marker in front of the text, so Backspace on an empty field is detectable. */
-export const SENTINEL = "​";
+export const SENTINEL = "\u200b";
 
 const segmenter =
   typeof Intl !== "undefined" && Intl.Segmenter
@@ -23,6 +23,26 @@ export function diff(before, after) {
   let common = 0;
   while (common < a.length && common < b.length && a[common] === b[common]) common += 1;
   return { backspace: a.length - common, insert: b.slice(common).join("") };
+}
+
+// Per-message limits of the protocol (phonepad/protocol.py MAX_TEXT counts code points).
+export const MAX_BACKSPACE = 1000;
+export const MAX_INSERT = 500;
+
+/** Split an edit into protocol-sized `text` messages, keeping the order. */
+export function chunkEdit({ backspace, insert }) {
+  const messages = [];
+  let left = backspace;
+  while (left > 0) {
+    const n = Math.min(left, MAX_BACKSPACE);
+    messages.push({ type: "text", backspace: n, insert: "" });
+    left -= n;
+  }
+  const points = Array.from(insert); // code points: never split a surrogate pair
+  for (let i = 0; i < points.length; i += MAX_INSERT) {
+    messages.push({ type: "text", backspace: 0, insert: points.slice(i, i + MAX_INSERT).join("") });
+  }
+  return messages;
 }
 
 /** Tracks the text already typed on the laptop for one text field. */

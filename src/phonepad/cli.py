@@ -25,12 +25,15 @@ from phonepad.network import (
 )
 from phonepad.paths import state_dir
 
+EXIT_CONFIG = 2  # bad settings or port in use: systemd does not restart (see service.py)
+
 
 def _config(args: argparse.Namespace) -> config_mod.Config:
     try:
         return config_mod.load(args.config)
     except config_mod.ConfigError as exc:
-        raise SystemExit(f"phonepad: {exc}") from exc
+        print(f"phonepad: {exc}", file=sys.stderr)
+        raise SystemExit(EXIT_CONFIG) from exc
 
 
 # --- serve -----------------------------------------------------------------------------------
@@ -52,14 +55,17 @@ def cmd_serve(args: argparse.Namespace) -> int:
         registry=Registry(state),
         trust=TrustStore(state),
         network=None if args.no_lan else NmcliSource(),
-        inputs=create_input_service(cfg.pointer_backend, args.record_input),
+        inputs=create_input_service(
+            cfg.pointer_backend, args.record_input, keymap_record=state / "keymap.json"
+        ),
         extra_listen=tuple(args.listen),
+        advertise_host=cfg.advertise_host,
     )
     try:
         asyncio.run(serve_forever(server))
-    except OSError as exc:
+    except OSError as exc:  # typically: the port is already in use
         logging.getLogger("phonepad").error("%s", exc)
-        return 1
+        return EXIT_CONFIG
     return 0
 
 
@@ -176,8 +182,17 @@ def cmd_trust(args: argparse.Namespace) -> int:
             print(f"  {c.uuid}  {c.name} ({c.device})")
         return 1
     conn = candidates[0]
+    if conn.type in ("802-3-ethernet", "ethernet") and not args.yes:
+        print(
+            f"{conn.name!r} is a wired connection profile. NetworkManager uses the same profile\n"
+            "on every network you plug into, so trusting it trusts all of them.\n"
+            "Run again with --yes if that is what you want."
+        )
+        return 1
     TrustStore(state_dir()).add(conn)
     print(f"Trusted {conn.name!r}. The server listens there within a few seconds.")
+    if conn.type in ("802-11-wireless", "wifi"):
+        print("Note: any Wi-Fi with the same name and password counts as this network.")
     return 0
 
 
@@ -252,6 +267,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("trust", help="trust the current network")
     p.add_argument("--uuid", help="NetworkManager connection UUID (if several are active)")
+    p.add_argument("--yes", action="store_true", help="also trust a wired connection profile")
     p.set_defaults(func=cmd_trust)
 
     p = sub.add_parser("untrust", help="stop trusting a network")

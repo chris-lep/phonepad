@@ -41,9 +41,11 @@ if [[ $REMOVE -eq 1 ]]; then
     echo "removed $RULE_FILE (access to /dev/uinput ends at the next reboot)"
   fi
   if command -v ufw >/dev/null; then
-    while num=$(ufw status numbered | grep 'phonepad' | head -n1 | grep -oP '^\[\s*\K[0-9]+'); [[ -n $num ]]; do
-      ufw --force delete "$num" >/dev/null
-      echo "removed ufw rule $num (phonepad)"
+    # `ufw show added` lists rules even while ufw is inactive, e.g.
+    #   ufw allow from 10.0.0.0/24 to any port 8790 proto tcp comment 'phonepad'
+    ufw show added | grep "comment 'phonepad'" | sed 's/^ufw //' | while read -r rule; do
+      eval "ufw --force delete $rule" >/dev/null
+      echo "removed ufw rule: $rule"
     done
   fi
   exit 0
@@ -67,12 +69,16 @@ fi
 # 2. firewall --------------------------------------------------------------------------------
 if ufw_active; then
   if [[ -z $SUBNET ]]; then
-    dev=$(ip -4 route show default | awk '{print $5; exit}')
-    SUBNET=$(ip -4 route show dev "$dev" proto kernel scope link | awk '{print $1; exit}')
-  fi
-  if [[ -z $SUBNET ]]; then
-    echo "cannot find the current subnet; pass --subnet, e.g. --subnet 10.0.0.0/24" >&2
-    exit 1
+    # The subnet of the interface that carries the default route ("default via X dev Y ...").
+    dev=$(ip -4 route show default | awk '{for (i = 1; i < NF; i++) if ($i == "dev") {print $(i + 1); exit}}')
+    if [[ -n $dev ]]; then
+      SUBNET=$(ip -4 route show dev "$dev" proto kernel scope link | awk '{print $1; exit}') || true
+    fi
+    if [[ -z $SUBNET ]]; then
+      echo "cannot find the current subnet; pass --subnet, e.g. --subnet 10.0.0.0/24" >&2
+      exit 1
+    fi
+    echo "using subnet $SUBNET of $dev (check it is your home network; override with --subnet)"
   fi
   ufw allow from "$SUBNET" to any port "$PORT" proto tcp comment 'phonepad'
   echo "ok: ufw allows TCP $PORT from $SUBNET"

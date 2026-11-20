@@ -21,21 +21,40 @@ from phonepad.paths import ensure_private_dir
 T = TypeVar("T")
 
 
-class JsonFile:
-    """A JSON object stored in `path`; anything else in the file reads as `default()`."""
+class StateFileError(RuntimeError):
+    """A state file exists but cannot be read or is not a JSON object."""
 
-    def __init__(self, path: Path, default: Callable[[], dict[str, Any]]) -> None:
+
+class JsonFile:
+    """A JSON object stored in `path`. A missing file reads as `default()`.
+
+    A file that exists but cannot be read raises `StateFileError` when `strict`, so a
+    temporary read error (or a corrupt file) is never mistaken for "no devices" and never
+    overwritten with the default. Non-strict files (the pairing code) read as `default()`.
+    """
+
+    def __init__(
+        self, path: Path, default: Callable[[], dict[str, Any]], *, strict: bool = True
+    ) -> None:
         self.path = path
         self._default = default
+        self._strict = strict
 
     def read(self) -> dict[str, Any]:
         try:
             with self.path.open(encoding="utf-8") as fh:
                 data = json.load(fh)
-        except (OSError, ValueError):
-            # Missing or corrupt: a broken file must not take the server down.
+        except FileNotFoundError:
             return self._default()
-        return data if isinstance(data, dict) else self._default()
+        except (OSError, ValueError) as exc:
+            if self._strict:
+                raise StateFileError(f"cannot read {self.path}: {exc}") from exc
+            return self._default()
+        if isinstance(data, dict):
+            return data
+        if self._strict:
+            raise StateFileError(f"{self.path} does not contain a JSON object")
+        return self._default()
 
     @contextmanager
     def _locked(self) -> Iterator[None]:

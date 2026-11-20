@@ -21,5 +21,8 @@ and `XAUTHORITY`, which the systemd user manager only has after the X session ha
 ## Decision Outcome
 
 Chosen option: "autostart entry starts the systemd unit": it starts after Cinnamon has
-exported its environment, and systemd adds restart on failure and journald logs.
+exported its environment, and systemd adds restart on failure and journald logs. Units do not
+inherit the caller's environment; on Mint `/etc/X11/Xsession.d/95dbus_update-activation-env`
+exports `DISPLAY` to the user manager, and the autostart entry also runs
+`systemctl --user import-environment DISPLAY XAUTHORITY` first, so it does not depend on that.
 `phonepad service install` writes both files with the current Python interpreter's path.

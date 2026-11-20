@@ -4,8 +4,10 @@ import {
   Accumulator,
   accelerate,
   FrameBatcher,
+  MAX_MOVE,
   pointerGain,
   scrollUnits,
+  split,
 } from "../../src/phonepad/static/js/motion.js";
 
 test("gain: constant when slow, grows with speed, capped", () => {
@@ -62,4 +64,27 @@ test("batcher sends once per frame and flushes on demand", () => {
   b.addMove(0.4, 0);
   b.flush();
   assert.equal(sent.length, 2); // nothing whole to send yet
+});
+
+test("split keeps every message within the protocol limits", () => {
+  assert.deepEqual(split({ dx: 0, dy: 0 }, 10), []);
+  assert.deepEqual(split({ dx: 25, dy: -4 }, 10), [
+    { dx: 10, dy: -4 },
+    { dx: 10, dy: 0 },
+    { dx: 5, dy: 0 },
+  ]);
+});
+
+test("a huge flick is sent as several moves", () => {
+  const sent = [];
+  const b = new FrameBatcher(
+    (m) => sent.push(m),
+    () => {},
+  );
+  b.addMove(MAX_MOVE * 2 + 1, 0);
+  b.flush();
+  assert.deepEqual(
+    sent.map((m) => m.dx),
+    [MAX_MOVE, MAX_MOVE, 1],
+  );
 });

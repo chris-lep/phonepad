@@ -9,7 +9,7 @@ import ipaddress
 import logging
 import mimetypes
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -20,6 +20,7 @@ from phonepad import __version__
 from phonepad.auth import Device, Registry
 from phonepad.input import InputService, InputUnavailableError
 from phonepad.input.base import PointerBackend
+from phonepad.jsonstore import StateFileError
 from phonepad.network import NetworkError, NetworkSource, TrustStore, trusted_addresses
 from phonepad.protocol import (
     CLOSE_BAD_MESSAGE,
@@ -33,6 +34,7 @@ from phonepad.protocol import (
     Message,
     Move,
     Pair,
+    Ping,
     ProtocolError,
     Scroll,
     Text,
@@ -46,10 +48,12 @@ STATIC_DIR = Path(__file__).parent / "static"
 LOOPBACK = "127.0.0.1"
 AUTH_TIMEOUT = 5.0
 HOUSEKEEPING_INTERVAL = 3.0
-HEARTBEAT = 15.0
+HEARTBEAT = 5.0  # a vanished phone is noticed (and its buttons released) within ~10 s
+MAX_PENDING_AUTH = 16  # unauthenticated WebSockets at a time
+NETWORK_FAILURES_TOLERATED = 2  # nmcli errors in a row before LAN listeners are closed
 MAX_MESSAGE = 16 * 1024
 ERROR_REPEAT_AFTER = 5.0
-CAPABILITIES = ("pointer", "scroll", "buttons", "keyboard")
+CAPABILITIES = ("pointer", "scroll", "buttons", "keyboard", "ping")
 
 mimetypes.add_type("application/manifest+json", ".webmanifest")
 mimetypes.add_type("text/javascript", ".js")
@@ -89,6 +93,7 @@ class PhonepadServer:
         network: NetworkSource | None,
         inputs: InputService,
         extra_listen: tuple[str, ...] = (),
+        advertise_host: str = "",
         static_dir: Path = STATIC_DIR,
     ) -> None:
         self.port = port
@@ -97,6 +102,10 @@ class PhonepadServer:
         self.network = network
         self.inputs = inputs
         self.extra_listen = extra_listen
+        self.advertise_host = advertise_host
+        self._pending_auth = 0
+        self._network_failures = 0
+        self._lan: set[str] = set()
         self.static_dir = static_dir
         self.sessions: set[Session] = set()
         self.sites: dict[str, web.TCPSite] = {}
@@ -112,18 +121,37 @@ class PhonepadServer:
             ButtonEvent: self._on_button,
             Text: self._on_text,
             Key: self._on_key,
+            Ping: self._on_ping,
         }
 
     # --- app -----------------------------------------------------------------------------
 
     def make_app(self) -> web.Application:
-        app = web.Application(middlewares=[self._headers])
+        app = web.Application(middlewares=[self._check_host, self._headers])
         app.router.add_get("/", self._index)
         app.router.add_get("/manifest.webmanifest", self._file("manifest.webmanifest"))
         app.router.add_get("/ws", self._websocket)
         app.router.add_get("/api/status", self._status)
         app.router.add_static("/static/", self.static_dir, follow_symlinks=False)
         return app
+
+    def _host_allowed(self, host: str) -> bool:
+        """Only names this server is reachable under (blocks DNS rebinding)."""
+        name = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+        name = name.strip("[]").lower()
+        allowed = {"localhost", LOOPBACK, *self.sites, *self.extra_listen}
+        if self.advertise_host:
+            allowed.add(self.advertise_host.lower())
+        return name in allowed
+
+    @web.middleware
+    async def _check_host(
+        self, request: web.Request, handler: Callable[[web.Request], Awaitable[web.StreamResponse]]
+    ) -> web.StreamResponse:
+        if not self._host_allowed(request.host):
+            log.warning("refused request for unknown host %r from %s", request.host, request.remote)
+            raise web.HTTPMisdirectedRequest(text="unknown host")
+        return await handler(request)
 
     @web.middleware
     async def _headers(
@@ -178,13 +206,20 @@ class PhonepadServer:
             log.warning("refused WebSocket from origin %s (host %s)", origin, request.host)
             raise web.HTTPForbidden(text="origin not allowed")
 
+        if self._pending_auth >= MAX_PENDING_AUTH:
+            raise web.HTTPServiceUnavailable(text="too many connections")
+
         ws = web.WebSocketResponse(heartbeat=HEARTBEAT, max_msg_size=MAX_MESSAGE)
         await ws.prepare(request)
         peer = request.remote or "?"
         sockname = request.transport.get_extra_info("sockname") if request.transport else None
         local_ip = sockname[0] if sockname else ""
 
-        device = await self._authenticate(ws, peer)
+        self._pending_auth += 1
+        try:
+            device = await self._authenticate(ws, peer)
+        finally:
+            self._pending_auth -= 1
         if device is None:
             return ws
 
@@ -201,15 +236,20 @@ class PhonepadServer:
                     capabilities=list(CAPABILITIES),
                 )
             )
-            task = asyncio.create_task(self._prepare_pointer(session))
-            self._tasks.add(task)
-            task.add_done_callback(self._tasks.discard)
+            self._spawn(self._prepare_pointer())
             await self._serve(session)
         finally:
+            # aiohttp may cancel this handler when the phone goes away; the release must run
+            # anyway, so it gets its own task.
             self.sessions.discard(session)
-            await self._release_buttons(session)
+            self._spawn(self._release_buttons(session))
             log.info("%s disconnected (%s)", device.name, ws.close_code)
         return ws
+
+    def _spawn(self, coro: Coroutine[Any, Any, None]) -> None:
+        task = asyncio.create_task(coro)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     async def _authenticate(self, ws: web.WebSocketResponse, peer: str) -> Device | None:
         try:
@@ -226,6 +266,21 @@ class PhonepadServer:
             await self._reject(ws, "bad_message", str(exc), CLOSE_BAD_MESSAGE)
             return None
 
+        try:
+            return await self._check_credentials(ws, peer, msg)
+        except StateFileError as exc:
+            log.error("%s", exc)
+            await self._reject(
+                ws,
+                "server_error",
+                "The laptop cannot read its device list.",
+                WSCloseCode.INTERNAL_ERROR,
+            )
+            return None
+
+    async def _check_credentials(
+        self, ws: web.WebSocketResponse, peer: str, msg: Message
+    ) -> Device | None:
         if isinstance(msg, Hello):
             device = await asyncio.to_thread(self.registry.authenticate, msg.token)
             if device is None:
@@ -233,7 +288,9 @@ class PhonepadServer:
                 await self._reject(ws, "unauthorized", "This phone is not paired.")
             return device
         if isinstance(msg, Pair):
-            result = await asyncio.to_thread(self.registry.complete_pairing, msg.code, msg.name)
+            result = await asyncio.to_thread(
+                self.registry.complete_pairing, msg.code, msg.name, msg.replaces
+            )
             if result is None:
                 log.warning("wrong or expired pairing code from %s", peer)
                 await self._reject(
@@ -288,9 +345,12 @@ class PhonepadServer:
 
     # --- handlers ------------------------------------------------------------------------
 
-    async def _prepare_pointer(self, session: Session) -> None:
+    async def _prepare_pointer(self) -> None:
         with contextlib.suppress(InputUnavailableError):
-            await self.inputs.pointer(lambda p: p.prepare_session())
+            await self.inputs.new_session()
+
+    async def _on_ping(self, session: Session, msg: Ping) -> None:
+        await session.ws.send_str(encode("pong"))
 
     async def _on_move(self, session: Session, msg: Move) -> None:
         await self.inputs.pointer(lambda p: p.move(msg.dx, msg.dy))
@@ -362,13 +422,21 @@ class PhonepadServer:
             return desired
         try:
             lan = await trusted_addresses(self.network, self.trust)
-        except NetworkError as exc:
-            # Fail closed: without NetworkManager we cannot tell whether the network is trusted.
+        except (NetworkError, StateFileError) as exc:
+            # Tolerate a short hiccup (NetworkManager restarting, resume from suspend), then
+            # fail closed: without NetworkManager we cannot tell whether the network is trusted.
+            self._network_failures += 1
+            if self._network_failures <= NETWORK_FAILURES_TOLERATED:
+                log.warning("cannot check networks (%s), keeping the current listeners", exc)
+                return desired | self._lan
             if str(exc) != self._network_problem:
                 log.error("cannot check networks, not listening on the LAN: %s", exc)
             self._network_problem = str(exc)
+            self._lan = set()
             return desired
+        self._network_failures = 0
         self._network_problem = ""
+        self._lan = lan
         return desired | lan
 
     async def _reconcile(self) -> None:
@@ -408,7 +476,11 @@ class PhonepadServer:
     async def _close_revoked(self) -> None:
         if not self.sessions:
             return
-        known = {d.id for d in await asyncio.to_thread(self.registry.devices)}
+        try:
+            known = {d.id for d in await asyncio.to_thread(self.registry.devices)}
+        except StateFileError as exc:
+            log.error("not checking revocations: %s", exc)  # never disconnect on a read error
+            return
         for session in [s for s in self.sessions if s.device.id not in known]:
             log.info("%s was revoked, disconnecting", session.device.name)
             await self._reject(session.ws, "revoked", "This phone was unpaired.", CLOSE_FORBIDDEN)
@@ -420,6 +492,8 @@ class PhonepadServer:
                 await self._housekeeping
         for session in list(self.sessions):
             await session.ws.close(code=WSCloseCode.GOING_AWAY, message=b"server shutdown")
+        if self._tasks:  # pending button releases
+            await asyncio.gather(*self._tasks, return_exceptions=True)
         if self._runner is not None:
             await self._runner.cleanup()
         self.sites.clear()

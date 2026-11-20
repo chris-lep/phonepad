@@ -28,3 +28,36 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
   - screenshots of all screens in dark and light
 - The e2e run found that a QR link opened while the page is already loaded only changes the
   fragment; fixed with a `hashchange` handler.
+
+## 2026-11-20 — independent review and fixes
+
+- **Independent review** (fable-reviewer): no authentication bypass; 5 major and 22 minor
+  findings. Fixed:
+  - XTest bursts garbled when keycodes were remapped before clients read the earlier press
+    (reproduced in Xephyr): 100 ms reuse guard, all spare keycodes used, crash leftovers
+    reclaimed from a `keymap.json` record (ADR-0003). Guessing leftovers from the keymap was
+    rejected: BackSpace and F-keys look the same.
+  - Text typed while offline was counted as sent, so later backspaces could delete laptop
+    text: the buffer resets on every status change and on failed sends.
+  - Dead sockets after phone sleep: `ping`/`pong`, connect timeout, reconnect when coming back
+    to the foreground.
+  - Client exceeded protocol limits (big flicks, pastes) and 4400 was not retried: deltas
+    split, edits chunked, 4400 retried.
+  - Tap then two-finger tap gave a double click: the drag button goes down only on movement.
+  - Minor: Host check against DNS rebinding, a cap on unauthenticated sockets, read errors
+    never count as "no devices", nmcli hiccups tolerated, wired profiles need `--yes`, X
+    events drained, no retyping after an X reconnect, failing backends recreated, uinput
+    retried after fallback, xinput wait only once, re-pairing keeps and then replaces the old
+    token, storage fallback in memory, sentinel written as an escape, setup script subnet and
+    `--remove` fixes, `import-environment` in autostart, no endless restarts on bad settings.
+  - Recorded instead of fixed: per-profile trust and the weak host model (ADR-0005), Backspace
+    per grapheme vs terminals and Safari's 7-day storage eviction (README "Known
+    limitations"), iOS behaviour to check on the device (STATE.md).
+- Found while fixing: aiohttp may cancel a session handler when the phone disconnects, which
+  skipped the button release; the release now runs in its own task.
+- Verified:
+  - pytest (80)
+  - node unit tests (38)
+  - e2e (9), including an outage test that restarts the server
+  - Xephyr (4): a 70-character burst read by a concurrent client, and crash leftovers
+    restored

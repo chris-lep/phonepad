@@ -96,12 +96,23 @@ class Hello(Message):
 class Pair(Message):
     code: str
     name: str
+    replaces: str = ""  # the phone's previous token, removed on success
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> Self:
         _check_version(data)
         code = "".join(_str(data, "code", 20).split())
-        return cls(code, _str(data, "name", MAX_NAME_LEN))
+        return cls(code, _str(data, "name", MAX_NAME_LEN), _str(data, "replaces", MAX_SECRET))
+
+
+@message("ping")
+@dataclass(frozen=True)
+class Ping(Message):
+    """Liveness check from the web app; answered with `pong`."""
+
+    @classmethod
+    def from_json(cls, data: dict[str, Any]) -> Self:
+        return cls()
 
 
 @message("move")

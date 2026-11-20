@@ -5,7 +5,7 @@ import { Connection } from "./connection.js";
 import { GestureRecognizer } from "./gestures.js";
 import { accelerate, FrameBatcher, scrollUnits } from "./motion.js";
 import { loadSettings, RANGES, saveSettings, tokenStore } from "./settings.js";
-import { TypingBuffer } from "./typing.js";
+import { chunkEdit, TypingBuffer } from "./typing.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -36,7 +36,7 @@ function deviceName() {
 /** Send a discrete message after any pending movement, so the order is kept. */
 function sendNow(message) {
   batcher.flush();
-  connection.send(message);
+  return connection.send(message);
 }
 
 // --- touchpad --------------------------------------------------------------------------------
@@ -147,19 +147,30 @@ function setKeyboardOpen(open) {
 keyboardToggle.addEventListener("click", () => setKeyboardOpen(keyboard.hidden));
 
 field.addEventListener("input", () => {
+  if (!connection.ready) {
+    // Never let the buffer believe text reached the laptop: later backspaces would delete
+    // unrelated text there.
+    resetTyping();
+    showToast("Not connected: the text was not sent.");
+    return;
+  }
   const { edit, field: replacement } = typing.input(field.value);
   if (replacement !== null) {
     field.value = replacement;
     placeCaretAtEnd();
   }
-  if (edit) sendNow({ type: "text", backspace: edit.backspace, insert: edit.insert });
+  if (edit && !chunkEdit(edit).every((message) => sendNow(message))) resetTyping();
 });
 
+// iOS may apply a pending autocorrection after the Return keydown; give its input event a
+// moment to arrive before Enter goes out and the field is cleared.
+const ENTER_DELAY_MS = 50;
 field.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.isComposing) {
-    e.preventDefault();
-    sendNow({ type: "key", key: "enter" });
-    resetTyping();
+    setTimeout(() => {
+      sendNow({ type: "key", key: "enter" });
+      resetTyping();
+    }, ENTER_DELAY_MS);
   }
 });
 
@@ -211,6 +222,7 @@ connection.addEventListener("status", (e) => {
   keyboardToggle.disabled = status === "ready" && !capabilities.includes("keyboard");
   $("pairing").hidden = status !== "unpaired";
   if (status !== "ready") batcher.reset();
+  resetTyping(); // the laptop's text cursor may have moved while we were away
   if (status === "ready") $("pair-error").textContent = "";
   $("about").textContent = connection.serverVersion
     ? `phonepad server ${connection.serverVersion}`
@@ -222,12 +234,23 @@ connection.addEventListener("pairerror", (e) => {
   $("pair-error").textContent = e.detail.message;
 });
 
-$("status").addEventListener("click", () => connection.connect());
+$("status").addEventListener("click", () => connection.reconnect());
 
-for (const event of ["visibilitychange", "pageshow", "online"]) {
-  window.addEventListener(event, () => {
-    if (document.visibilityState === "visible") connection.connect();
-  });
+// After the phone slept, the socket can look open while it is dead: start a fresh one.
+const STALE_AFTER_MS = 3000;
+let hiddenSince = null;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    hiddenSince = Date.now();
+    return;
+  }
+  const stale = hiddenSince !== null && Date.now() - hiddenSince > STALE_AFTER_MS;
+  hiddenSince = null;
+  if (stale) connection.reconnect();
+  else connection.connect();
+});
+for (const event of ["pageshow", "online"]) {
+  window.addEventListener(event, () => connection.connect());
 }
 
 let toastTimer;

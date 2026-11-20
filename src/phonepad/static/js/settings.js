@@ -20,20 +20,27 @@ export const RANGES = Object.freeze({
 const SETTINGS_KEY = "phonepad.settings";
 const TOKEN_KEY = "phonepad.token";
 
+// Fallback while storage is blocked (private mode): values live until the page is closed.
+const memory = new Map();
+
 function read(key) {
   try {
-    return localStorage.getItem(key);
+    const value = localStorage.getItem(key);
+    if (value !== null) return value;
   } catch {
-    return null;
+    // blocked storage
   }
+  return memory.get(key) ?? null;
 }
 
 function write(key, value) {
+  if (value === null) memory.delete(key);
+  else memory.set(key, value);
   try {
     if (value === null) localStorage.removeItem(key);
     else localStorage.setItem(key, value);
   } catch {
-    // private mode or blocked storage: keep working with in-memory values
+    // blocked storage: the in-memory copy above keeps the page working
   }
 }
 

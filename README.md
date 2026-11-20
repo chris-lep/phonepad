@@ -80,12 +80,13 @@ remembers the address.
 | firewall rule              | ufw rule with comment `phonepad`                          | step 2 (sudo)                |
 | systemd user unit          | `~/.config/systemd/user/phonepad.service`                 | `phonepad service install`   |
 | autostart entry            | `~/.config/autostart/phonepad.desktop`                    | `phonepad service install`   |
-| state (devices, networks)  | `~/.local/state/phonepad/` (0700, files 0600)             | `trust`, `pair`, the server  |
+| state (devices, networks, claimed keycodes) | `~/.local/state/phonepad/` (0700, files 0600) | `trust`, `pair`, the server |
 | settings (optional)        | `~/.config/phonepad/config.toml`                          | you, by hand                 |
 | on the iPhone              | home-screen icon, Safari site data for the laptop address | you                          |
 
 Nothing else is written. The server changes the X keymap only while it runs (spare keycodes,
-cleared on exit) and creates the virtual mouse only while it runs.
+cleared on exit, and reclaimed on the next start after a crash) and creates the virtual mouse
+only while it runs.
 
 ## Uninstall
 
@@ -140,6 +141,15 @@ networks, pending code; files mode 0600).
   network's address. The firewall rule limits the port to the home subnet.
 - Plain HTTP on the home network: someone sniffing your Wi-Fi could copy a token. See
   [ADR-0004](docs/decisions/0004-pairing-code-and-device-tokens.md).
+
+## Known limitations
+
+- Not yet tried on a real iPhone; see the open questions in [docs/STATE.md](docs/STATE.md).
+- Backspace is sent per user-visible character. Terminals delete per code point, so editing
+  right after an emoji sequence (👍🏽) or a decomposed accent can leave a remainder there.
+- Safari (not the home-screen app) may delete the page's data after 7 days without use; the
+  phone then has to pair again.
+- X11 only for the keyboard (ADR-0003).
 
 ## Development
 

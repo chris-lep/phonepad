@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { diff, graphemes, SENTINEL, TypingBuffer } from "../../src/phonepad/static/js/typing.js";
+import {
+  chunkEdit,
+  diff,
+  graphemes,
+  MAX_BACKSPACE,
+  MAX_INSERT,
+  SENTINEL,
+  TypingBuffer,
+} from "../../src/phonepad/static/js/typing.js";
 
 test("diff keeps the common prefix", () => {
   assert.deepEqual(diff("", "hi"), { backspace: 0, insert: "hi" });
@@ -44,4 +52,23 @@ test("buffer: reset forgets sent text", () => {
   b.input(`${SENTINEL}abc`);
   b.reset();
   assert.deepEqual(b.input(`${SENTINEL}x`).edit, { backspace: 0, insert: "x" });
+});
+
+test("the sentinel is U+200B", () => {
+  assert.equal(SENTINEL, String.fromCharCode(0x200b));
+});
+
+test("chunkEdit splits long edits within the protocol limits", () => {
+  assert.deepEqual(chunkEdit({ backspace: 2, insert: "ab" }), [
+    { type: "text", backspace: 2, insert: "" },
+    { type: "text", backspace: 0, insert: "ab" },
+  ]);
+  const long = chunkEdit({ backspace: MAX_BACKSPACE + 5, insert: "😀".repeat(MAX_INSERT + 1) });
+  assert.deepEqual(
+    long.map((m) => m.backspace),
+    [MAX_BACKSPACE, 5, 0, 0],
+  );
+  assert.equal(Array.from(long[2].insert).length, MAX_INSERT);
+  assert.equal(long[3].insert, "😀"); // surrogate pairs are never split
+  assert.deepEqual(chunkEdit({ backspace: 0, insert: "" }), []);
 });
