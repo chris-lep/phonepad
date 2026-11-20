@@ -71,6 +71,49 @@ and type a code there (home-screen apps have their own storage, so they pair sep
 Tip: reserve the laptop's IP address in the router (DHCP reservation); the home-screen app
 remembers the address.
 
+## What the setup changes
+
+| Change                     | Path / place                                              | Made by                      |
+| -------------------------- | --------------------------------------------------------- | ---------------------------- |
+| conda environment          | `~/miniconda3/envs/phonepad`                              | step 1                       |
+| udev rule (uinput access)  | `/etc/udev/rules.d/70-phonepad-uinput.rules` (root, 0644) | step 2 (sudo)                |
+| firewall rule              | ufw rule with comment `phonepad`                          | step 2 (sudo)                |
+| systemd user unit          | `~/.config/systemd/user/phonepad.service`                 | `phonepad service install`   |
+| autostart entry            | `~/.config/autostart/phonepad.desktop`                    | `phonepad service install`   |
+| state (devices, networks)  | `~/.local/state/phonepad/` (0700, files 0600)             | `trust`, `pair`, the server  |
+| settings (optional)        | `~/.config/phonepad/config.toml`                          | you, by hand                 |
+| on the iPhone              | home-screen icon, Safari site data for the laptop address | you                          |
+
+Nothing else is written. The server changes the X keymap only while it runs (spare keycodes,
+cleared on exit) and creates the virtual mouse only while it runs.
+
+## Uninstall
+
+In this order (the service first, so nothing recreates state while you delete it):
+
+```bash
+phonepad service uninstall                 # stops the server, removes the unit and autostart entry
+sudo ~/dev/personal/phonepad/scripts/setup-system.sh --remove   # udev rule + ufw rule
+rm -rf ~/.local/state/phonepad ~/.config/phonepad                # paired devices, trusted networks, settings
+conda env remove -n phonepad               # the Python environment
+rm -rf ~/dev/personal/phonepad             # the code (only if you want it gone)
+```
+
+By hand instead of the commands:
+
+1. Service: `systemctl --user stop phonepad.service`, then delete
+   `~/.config/systemd/user/phonepad.service` and `~/.config/autostart/phonepad.desktop`, then
+   `systemctl --user daemon-reload`.
+2. udev: `sudo rm /etc/udev/rules.d/70-phonepad-uinput.rules && sudo udevadm control --reload-rules`.
+   The access to `/dev/uinput` granted earlier ends at the next reboot.
+3. Firewall: `sudo ufw status numbered`, then `sudo ufw delete <number>` for each line with the
+   comment `phonepad`.
+4. State, settings, conda environment and code: as in the commands above.
+5. iPhone: long-press the phonepad icon → Delete Bookmark; Settings → Apps → Safari → Advanced
+   → Website Data → remove the laptop's address.
+
+`phonepad doctor` before step 4 shows what is still in place.
+
 ## Commands
 
 | Command                                     | What it does                                             |
