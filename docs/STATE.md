@@ -8,18 +8,20 @@ _Last updated: 2026-11-20_
   L/R buttons), live typing with special keys, pairing, trusted networks, autostart, doctor.
 - An independent review (2026-11-20) found no way to inject input without a token and 5 major
   plus 22 minor problems; all are fixed or recorded (see the worklog).
-- Verified by automated tests only: unit tests, an e2e run in headless Chrome with an
-  emulated iPhone (incl. a server restart), and XTest typing in Xephyr (incl. bursts and crash
-  leftovers). **Not yet tried on the real iPhone.**
+- Verified by automated tests (unit, e2e in headless Chrome with an emulated iPhone incl. a
+  server restart, XTest typing against a separate X server incl. bursts and crash leftovers;
+  CI runs all of them) and by a first test on the owner's iPhone on 2026-11-20: setup,
+  pairing in Safari and as home-screen app, touchpad. The open questions below are still
+  unchecked.
+- Prepared for publication on GitHub: MIT license, README for new users, CI.
 
 ## Next steps
 
-1. Christopher runs `sudo scripts/setup-system.sh` (udev rule for `/dev/uinput`, ufw rule).
-2. `phonepad trust` at home, `phonepad service install`, `phonepad pair`, then test on the
-   iPhone, in Safari and as a home-screen app.
-3. Tune the defaults (speed, acceleration, scroll speed, tap-and-drag window) from that test.
+1. Use it for a while on the iPhone and answer the open questions below.
+2. Tune the defaults (speed, acceleration, scroll speed, tap-and-drag window) from that.
+3. After the first push: check that CI passes on GitHub.
 
-## Open questions for Christopher
+## Open questions for the owner
 
 Need the real iPhone to answer:
 

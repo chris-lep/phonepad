@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # One-time pairing code, then a per-device token; plain HTTP on the LAN
@@ -9,7 +9,7 @@ decision-makers: Christopher Lepenik
 ## Context and Problem Statement
 
 Controlling input means being able to type commands, so nobody else on the Wi-Fi may connect.
-Christopher chose QR-code pairing. iOS home-screen web apps have storage separate from Safari,
+The owner chose QR-code pairing. iOS home-screen web apps have storage separate from Safari,
 so a token saved after scanning a QR code in Safari is not visible to the home-screen app.
 
 ## Considered Options

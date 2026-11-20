@@ -90,7 +90,8 @@ async def test_index_and_static_files_with_security_headers(client: TestClient[A
 
     js = await client.get("/static/js/main.js")
     assert js.status == 200
-    assert js.content_type == "text/javascript"
+    # Both are JavaScript MIME types for module scripts (Python 3.11 reports the older one).
+    assert js.content_type in ("text/javascript", "application/javascript")
     manifest = await client.get("/manifest.webmanifest")
     assert manifest.content_type == "application/manifest+json"
     assert (await client.get("/static/../server.py")).status in (403, 404)

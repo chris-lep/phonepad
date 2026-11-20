@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # A web app served from the laptop, with an aiohttp server
@@ -9,8 +9,8 @@ decision-makers: Christopher Lepenik
 ## Context and Problem Statement
 
 The phone needs a touch surface that sends events to the laptop with low latency. KDE Connect
-pulls in about 160 packages (140 MB); Unified Remote is closed source. Christopher chose to
-build it himself, without an App Store app.
+pulls in about 160 packages (140 MB); Unified Remote is closed source. The owner chose to
+build it, without an App Store app.
 
 ## Considered Options
 

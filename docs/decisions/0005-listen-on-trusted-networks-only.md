@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # Listen only on trusted networks (plus loopback)
 
 ## Context and Problem Statement
 
-With autostart the server also runs in offices and hotels. Christopher chose to accept
+With autostart the server also runs in offices and hotels. The owner chose to accept
 connections only on networks he allows.
 
 ## Considered Options

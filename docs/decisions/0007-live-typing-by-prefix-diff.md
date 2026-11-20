@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # Live typing as "backspaces + insert" from a prefix diff
 
 ## Context and Problem Statement
 
-Christopher wants characters to appear on the laptop while typing. iOS changes text after it
+The owner wants characters to appear on the laptop while typing. iOS changes text after it
 was typed (autocorrect, predictions, dictation), and key events on iOS are unreliable for
 the software keyboard.
 

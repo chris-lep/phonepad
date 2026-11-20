@@ -2,11 +2,12 @@
 
 What the app must do. This is the source of truth for behaviour: change it in the same commit
 as the code. The reasons behind choices are in [decisions/](decisions/README.md). Requirements
-agreed with Christopher on 2026-11-20 (interview).
+agreed in an interview on 2026-11-20.
 
 ## Purpose
 
-Use an iPhone as touchpad and keyboard for the ThinkPad (Linux Mint, Cinnamon, X11). Main uses:
+Use an iPhone as touchpad and keyboard for a Linux laptop (X11; developed on Linux Mint with
+Cinnamon). Main uses:
 from the sofa while the laptop drives the TV over HDMI, and at the desk when the laptop is out
 of reach. Nothing is installed on the phone: the laptop serves a web app that Safari opens,
 ideally added to the home screen so it runs full screen.

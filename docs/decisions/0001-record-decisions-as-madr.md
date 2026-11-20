@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # Record decisions as MADR files in docs/decisions

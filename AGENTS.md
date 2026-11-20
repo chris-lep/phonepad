@@ -1,8 +1,8 @@
 # AGENTS.md — phonepad
 
-iPhone as touchpad and keyboard for Christopher's ThinkPad (Linux Mint, Cinnamon, X11). A
+iPhone as touchpad and keyboard for a Linux laptop (developed on Linux Mint, Cinnamon, X11). A
 Python server (aiohttp) serves a no-build web app and turns WebSocket messages into input
-events (uinput pointer, XTest keyboard). Main use: from the sofa, laptop on the TV.
+events (uinput pointer, XTest keyboard). Main use: from the sofa, with the laptop on the TV.
 
 ## Start here
 
@@ -17,7 +17,7 @@ events (uinput pointer, XTest keyboard). Main use: from the sofa, laptop on the 
 ```bash
 conda activate phonepad          # Python 3.12 env, package installed editable
 make check                       # ruff format+lint, mypy, Biome, pytest, node unit + e2e
-make xtest                       # XTest typing against a nested Xephyr server (opens a small window)
+make xtest                       # XTest typing against a throwaway X server (Xvfb, or Xephyr window)
 make fmt                         # apply formatting (ruff, Biome)
 phonepad serve --no-lan --port 0 --record-input /tmp/ev.jsonl   # safe local run, no real input
 ```
@@ -35,7 +35,8 @@ First-time setup: see [README.md](README.md#development).
 - `src/phonepad/static/`: `js/gestures.js`, `js/motion.js`, `js/typing.js` (pure, unit-tested),
   `js/connection.js` (WebSocket, auth, reconnect), `js/settings.js`, `js/main.js` (DOM wiring).
 - `tests/`: Python (`test_*.py`), `js/` (node:test), `e2e/` (real server + headless Chrome).
-- `scripts/`: `setup-system.sh` (sudo: udev + ufw; Christopher runs it), `with-test-display.sh`,
+- `.github/workflows/ci.yml`: lint, types, unit, e2e and XTest tests (Xvfb) on every push.
+- `scripts/`: `setup-system.sh` (sudo: udev + ufw; run by the user, never by an agent), `with-test-display.sh`,
   `make_icons.py`.
 
 ## Adding a feature (extension points)
@@ -49,10 +50,10 @@ First-time setup: see [README.md](README.md#development).
 
 ## Hard rules
 
-- **Never inject real input into Christopher's desktop** from tests or experiments: it could
-  type into his terminal. Use `--record-input`, the recording backends or `make xtest`.
-- **No system changes without his approval** (apt, sudo, `/etc`, udev, ufw). System steps go
-  into `scripts/setup-system.sh` and the README for him to run.
+- **Never inject real input into the developer's desktop** from tests or experiments: it could
+  type into their terminal. Use `--record-input`, the recording backends or `make xtest`.
+- **No system changes without the owner's approval** (apt, sudo, `/etc`, udev, ufw). System
+  steps go into `scripts/setup-system.sh` and the README for the user to run.
 - Keep the security model (ADR-0004, ADR-0005): authenticate in the first message, LAN only on
   trusted networks, Origin check, only token hashes on disk, files mode 0600.
 - Runtime dependencies stay small (aiohttp, evdev, python-xlib, segno); the frontend has no
@@ -81,5 +82,5 @@ First-time setup: see [README.md](README.md#development).
 | A mistake worth not repeating                  | Gotchas above                  | At most 3 lines each.                                    |
 
 - One fact lives in one place; link to it instead of copying it.
-- Christopher decides scope and behaviour. Record his decisions as ADRs (`decision-makers`),
-  and list open questions in STATE.md rather than deciding them silently.
+- The project owner decides scope and behaviour. Record those decisions as ADRs
+  (`decision-makers`), and list open questions in STATE.md rather than deciding them silently.

@@ -1,14 +1,14 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # Autostart: XDG autostart entry starts a systemd user unit
 
 ## Context and Problem Statement
 
-Christopher wants the server running after login without a terminal. XTest needs `DISPLAY`
+The owner wants the server running after login without a terminal. XTest needs `DISPLAY`
 and `XAUTHORITY`, which the systemd user manager only has after the X session has started.
 `graphical-session.target` is not active under Cinnamon.
 

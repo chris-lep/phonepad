@@ -1,7 +1,7 @@
 ---
 status: accepted
 date: 2026-11-20
-decision-makers: Christopher Lepenik
+decision-makers: project owner
 ---
 
 # uinput for the pointer, XTest for the keyboard, behind backend interfaces
@@ -20,7 +20,7 @@ rewrite.
 
 ## Decision Outcome
 
-Chosen option: "uinput pointer + XTest keyboard" (Christopher, interview). The uinput mouse
+Chosen option: "uinput pointer + XTest keyboard" (owner, interview). The uinput mouse
 has high-resolution wheels (pixel-smooth scrolling) and works on Wayland. XTest types any
 character by temporarily mapping a spare keycode to the needed keysym, so the layout does not
 matter. Both sit behind the `PointerBackend` / `KeyboardBackend` protocols in

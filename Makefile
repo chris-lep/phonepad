@@ -21,7 +21,7 @@ test:
 e2e:
 	node --test --test-concurrency=1 "tests/e2e/*.test.js"
 
-# XTest typing against a throwaway nested X server (Xephyr, opens a small window briefly)
+# XTest typing against a throwaway X server (Xvfb, or Xephyr which opens a small window briefly)
 xtest:
 	scripts/with-test-display.sh pytest -m xserver
 

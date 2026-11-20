@@ -5,8 +5,8 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
 
 ## 2026-11-20 — idea, interview, v0.1.0
 
-- Christopher wanted to control the laptop's cursor from his iPhone. KDE Connect was too heavy
-  (160 packages, 140 MB), so he chose to build it himself, "properly and extendable".
+- The owner wanted to control the laptop's cursor from an iPhone. KDE Connect was too heavy
+  (160 packages, 140 MB), so the owner chose to build it, "properly and extendable".
 - Three interview rounds settled the requirements (`docs/SPEC.md`):
   - uses: sofa → TV, desk
   - v1 adds live typing
@@ -16,9 +16,9 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
   - decisions in ADR-0002 to ADR-0008
 - Pairing became "one-time code, then device token" (ADR-0004), because iOS home-screen apps
   do not share storage with Safari.
-- Installed only into the conda env `phonepad` and the repo's `node_modules`. Christopher asked
+- Installed only into the conda env `phonepad` and the repo's `node_modules`. The owner asked
   for no system changes without approval, so the udev and ufw steps are in
-  `scripts/setup-system.sh` for him to run.
+  `scripts/setup-system.sh` for the user to run.
 - Verified:
   - pytest (63)
   - node unit tests (28)
@@ -61,3 +61,19 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
   - e2e (9), including an outage test that restarts the server
   - Xephyr (4): a 70-character burst read by a concurrent client, and crash leftovers
     restored
+
+## 2026-11-20 — first real use, publication
+
+- The owner set it up and used it on the iPhone (Safari and home-screen app): works.
+- Prepared the repo for a public GitHub repository:
+  - MIT license (copyright in the owner's name)
+  - neutral wording instead of personal names in the docs
+  - README rewritten for new users: requirements, venv install, generic subnet example,
+    daily use, screenshots (`docs/images/screenshots.png`, from the e2e setup), security
+    contact
+  - GitHub Actions CI: lint, types, unit, e2e, XTest typing against Xvfb, pytest on Python
+    3.11 and 3.13
+  - `scripts/with-test-display.sh` prefers headless Xvfb over Xephyr
+  - Claude session links removed from the commit messages before the first push
+- Found on Python 3.11: aiohttp serves `.js` as `application/javascript`; the test now
+  accepts both JavaScript MIME types.

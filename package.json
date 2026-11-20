@@ -1,6 +1,7 @@
 {
   "name": "phonepad",
   "private": true,
+  "license": "MIT",
   "description": "Dev tooling for the phonepad frontend (lint, format, tests). Runtime needs no Node.",
   "type": "module",
   "scripts": {

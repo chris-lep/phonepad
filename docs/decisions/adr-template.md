@@ -4,7 +4,7 @@
 # Optional sections may be deleted.
 status: "{proposed | rejected | accepted | deprecated | superseded by ADR-NNNN}"
 date: {YYYY-MM-DD when the decision was last updated}
-decision-makers: {who decided, e.g. Christopher Lepenik}
+decision-makers: {who decided, e.g. project owner}
 consulted: {optional: whose opinion was sought, e.g. a reviewer}
 informed: {optional}
 ---
