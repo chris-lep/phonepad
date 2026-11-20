@@ -9,8 +9,9 @@ decision-makers: project owner
 ## Context and Problem Statement
 
 Controlling input means being able to type commands, so nobody else on the Wi-Fi may connect.
-The owner chose QR-code pairing. iOS home-screen web apps have storage separate from Safari,
-so a token saved after scanning a QR code in Safari is not visible to the home-screen app.
+The owner chose QR-code pairing. iOS home-screen web apps have storage separate from the browser
+that added them, so a token saved after scanning a QR code in the browser is not visible to
+the home-screen app.
 
 ## Considered Options
 
@@ -31,6 +32,6 @@ sniffed on the LAN; accepted for a home network.
 
 ### Consequences
 
-- Good, because pairing works in both Safari and the home-screen app.
-- Bad, because some iOS APIs need HTTPS (screen wake lock, motion sensors for an "air mouse").
+- Good, because pairing works in the browser and in an iOS home-screen app.
+- Bad, because some browser APIs need HTTPS (screen wake lock, motion sensors for an "air mouse").
   Revisit with a local CA certificate installed on the phone when such a feature is wanted.

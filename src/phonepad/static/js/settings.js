@@ -1,5 +1,5 @@
 // Settings and the device token, kept in this page's local storage (per phone, per
-// Safari / home-screen app). Storage may be unavailable or cleared: defaults then apply.
+// browser / home-screen app). Storage may be unavailable or cleared: defaults then apply.
 
 export const DEFAULT_SETTINGS = Object.freeze({
   speed: 1.6,

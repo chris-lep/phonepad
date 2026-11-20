@@ -8,9 +8,9 @@ decision-makers: project owner
 
 ## Context and Problem Statement
 
-The owner wants characters to appear on the laptop while typing. iOS changes text after it
-was typed (autocorrect, predictions, dictation), and key events on iOS are unreliable for
-the software keyboard.
+The owner wants characters to appear on the laptop while typing. Phone keyboards change text
+after it was typed (autocorrect, predictions, dictation, composition on Android), and key
+events from software keyboards are unreliable (Android often reports "Unidentified").
 
 ## Considered Options
 
@@ -21,7 +21,7 @@ the software keyboard.
 ## Decision Outcome
 
 Chosen option: "prefix diff", counted in grapheme clusters (`Intl.Segmenter`), because the
-laptop then always ends with the field's text, whatever iOS did. An invisible marker in front of
+laptop then always ends with the field's text, whatever the keyboard did. An invisible marker in front of
 the text detects Backspace on an empty field. The field is cleared when the laptop's text cursor
 may have moved (clicks, Enter, special keys).
 

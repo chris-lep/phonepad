@@ -27,7 +27,7 @@ def unit_text(python: str) -> str:
 # Started at login by ~/.config/autostart/{AUTOSTART_NAME}, which first imports DISPLAY and
 # XAUTHORITY into the systemd user manager (see docs/decisions/0006-*.md).
 [Unit]
-Description=phonepad: iPhone touchpad and keyboard server
+Description=phonepad: phone as touchpad and keyboard
 StartLimitIntervalSec=120
 StartLimitBurst=5
 
@@ -52,7 +52,7 @@ def autostart_text() -> str:
 [Desktop Entry]
 Type=Application
 Name=phonepad
-Comment=Start the phonepad server (iPhone touchpad and keyboard)
+Comment=Start the phonepad server (phone as touchpad and keyboard)
 Exec={AUTOSTART_EXEC}
 X-GNOME-Autostart-enabled=true
 """

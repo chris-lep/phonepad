@@ -1,11 +1,11 @@
 # phonepad
 
-Use your iPhone as touchpad and keyboard for your Linux laptop, for example from the sofa while
-the laptop drives the TV. The laptop serves a small web app; the phone opens it in Safari or as
-a home-screen app. Nothing is installed on the phone, and the laptop accepts phones only on
-networks you trust.
+Use your phone as touchpad and keyboard for your Linux laptop, for example from the sofa while
+the laptop drives the TV. The laptop serves a small web app; the phone opens it in its browser
+or as a home-screen app. Nothing is installed on the phone, and the laptop accepts phones only
+on networks you trust.
 
-![phonepad on an iPhone: pairing, touchpad, live typing, settings](docs/images/screenshots.png)
+![phonepad on a phone: pairing, touchpad, live typing, settings](docs/images/screenshots.png)
 
 - One finger moves the pointer, a tap clicks, tap-then-touch drags; **L** / **R** buttons too.
 - Two fingers scroll smoothly (pixel-precise, through a virtual mouse); a two-finger tap is a
@@ -25,8 +25,10 @@ Requirements and behaviour: [docs/SPEC.md](docs/SPEC.md). Why it is built this w
 - Python 3.11 or newer. `evdev` is compiled during installation, so you need a C compiler and
   the Python headers (Debian/Ubuntu: `sudo apt install build-essential python3-dev python3-venv`),
   or use conda, which brings the headers.
-- A phone on the same network. Tested with an iPhone (Safari and home-screen app); other
-  modern mobile browsers should work but are untested.
+- A phone with a current browser on the same network. Tested on an iPhone with Vivaldi, in
+  the browser and as a home-screen app (all iOS browsers use the same engine, WebKit). Android
+  browsers use the same web standards and should work, but have not been tested yet; reports
+  are welcome.
 
 ## Setup
 
@@ -80,9 +82,13 @@ phonepad doctor             # checks everything above
 ```
 
 On the phone, scan the QR code with the camera: it opens the web app in the browser and pairs
-it. For the full-screen app on an iPhone: Safari → Share → **Add to Home Screen**, open it from
-the home screen and type a code there (home-screen apps have their own storage, so they pair
-separately; run `phonepad pair` again for a fresh code).
+it. To start it from the home screen:
+
+- **iPhone:** in the browser's share menu → **Add to Home Screen** (Safari, and other browsers
+  such as Vivaldi on iOS 16.4 or newer). It then runs full screen, but has its own storage:
+  open it and type a code there (run `phonepad pair` again for a fresh one).
+- **Android:** browser menu → **Add to Home screen**. Over plain HTTP this is a shortcut that
+  opens in the browser and keeps the browser's pairing (untested).
 
 Tip: reserve the laptop's IP address in your router (DHCP reservation); the home-screen app
 remembers the address.
@@ -90,8 +96,8 @@ remembers the address.
 ## Daily use
 
 The phone stays paired. It is connected while the app is open and reconnects by itself
-within about a second when you open it again (iOS closes the connection when the phone locks
-or the app goes to the background). It cannot connect while the laptop sleeps or is on a
+within about a second when you open it again (phones close the connection when they lock or
+the browser goes to the background). It cannot connect while the laptop sleeps or is on a
 network you have not trusted. The phone's screen may auto-lock while you use the touchpad;
 raise Auto-Lock in the phone's settings if that bothers you.
 
@@ -153,8 +159,8 @@ By hand instead of the commands:
 3. Firewall: `sudo ufw status numbered`, then `sudo ufw delete <number>` for each line with the
    comment `phonepad`.
 4. State, settings, symlink and clone: as in the commands above.
-5. iPhone: long-press the phonepad icon → Delete Bookmark; Settings → Apps → Safari → Advanced
-   → Website Data → remove the laptop's address.
+5. Phone: remove the home-screen icon, and delete the browser's site data for the laptop's
+   address in the browser's settings.
 
 `phonepad doctor` before step 4 shows what is still in place.
 
@@ -176,8 +182,9 @@ contact, or use GitHub's private vulnerability reporting if it is enabled.
 - X11 only for the keyboard ([ADR-0003](docs/decisions/0003-uinput-pointer-and-xtest-keyboard.md)).
 - Backspace is sent per user-visible character. Terminals delete per code point, so editing
   right after an emoji sequence (👍🏽) or a decomposed accent can leave a remainder there.
-- Safari (not the home-screen app) may delete the page's data after 7 days without use; the
-  phone then has to pair again.
+- On iPhones, the browser (not the home-screen app) may delete the page's data after a while
+  without use (Safari: 7 days); the phone then has to pair again.
+- Android has not been tested yet.
 - Open questions that need more testing on a real phone are listed in
   [docs/STATE.md](docs/STATE.md).
 

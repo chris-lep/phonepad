@@ -6,10 +6,10 @@ agreed in an interview on 2026-11-20.
 
 ## Purpose
 
-Use an iPhone as touchpad and keyboard for a Linux laptop (X11; developed on Linux Mint with
-Cinnamon). Main uses:
+Use a phone as touchpad and keyboard for a Linux laptop (X11; developed on Linux Mint with
+Cinnamon, tested on an iPhone with Vivaldi). Main uses:
 from the sofa while the laptop drives the TV over HDMI, and at the desk when the laptop is out
-of reach. Nothing is installed on the phone: the laptop serves a web app that Safari opens,
+of reach. Nothing is installed on the phone: the laptop serves a web app that the phone's browser opens,
 ideally added to the home screen so it runs full screen.
 
 ## Parts
@@ -48,13 +48,13 @@ ideally added to the home screen so it runs full screen.
 
 ## Keyboard
 
-- The keyboard button opens a text field and the iPhone keyboard. Typing is **live**: every
+- The keyboard button opens a text field and the phone's keyboard. Typing is **live**: every
   change in the field is sent as "delete n characters, then type this text", computed from the
   common prefix of the old and new text in grapheme clusters. Autocorrect, predictions,
   dictation and editing in the middle of the field therefore end in the same text on the laptop.
 - The field keeps an invisible marker (U+200B) in front of the text. Deleting it means
   Backspace on an empty field: the app sends Backspace and restores the marker.
-- Return sends Enter (50 ms later, so a pending iOS autocorrection arrives first) and clears
+- Return sends Enter (50 ms later, so a pending autocorrection arrives first, as seen on iOS) and clears
   the field. Any click, button or special key also clears it, as the laptop's text cursor may
   have moved; so does every change of the connection status.
 - While not connected, typed text is not sent: the field is cleared and a message says so, so
@@ -76,9 +76,10 @@ storage; if they are lost the defaults apply and the phone must be paired again.
 - `phonepad pair` creates a one-time pairing code (6 digits, valid 5 minutes, at most 5 wrong
   tries, a new code replaces the old one). It prints the code and a QR code for
   `http://<laptop-ip>:<port>/#code=<code>`.
-- Scanning the QR code opens the web app in Safari, which pairs at once (also when the page is
-  already open). In the home-screen app (it has its own storage) the code is typed into the
-  pairing screen instead.
+- Scanning the QR code opens the web app in the phone's browser, which pairs at once (also when
+  the page is already open). An iOS home-screen app has its own storage, so there the code is
+  typed into the pairing screen instead. (Android browsers add home-screen shortcuts for plain
+  HTTP pages that share the browser's storage; untested.)
 - A phone that pairs again keeps its old token until the new code is accepted, and its old
   device entry is then replaced, not duplicated.
 - A successful pairing gives the phone a random device token (256 bit). The server stores only

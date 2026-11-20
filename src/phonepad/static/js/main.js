@@ -162,7 +162,7 @@ field.addEventListener("input", () => {
   if (edit && !chunkEdit(edit).every((message) => sendNow(message))) resetTyping();
 });
 
-// iOS may apply a pending autocorrection after the Return keydown; give its input event a
+// A mobile keyboard (seen on iOS) may apply a pending autocorrection after the Return keydown; give its input event a
 // moment to arrive before Enter goes out and the field is cleared.
 const ENTER_DELAY_MS = 50;
 field.addEventListener("keydown", (e) => {
@@ -190,7 +190,7 @@ function applyTypingSettings() {
   field.spellcheck = settings.autocorrect;
 }
 
-// --- viewport (the iOS keyboard shrinks the visual viewport only) ----------------------------
+// --- viewport (mobile keyboards shrink only the visual viewport on iOS) ----------------------------
 
 const app = $("app");
 function fitViewport() {

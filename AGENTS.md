@@ -1,6 +1,6 @@
 # AGENTS.md — phonepad
 
-iPhone as touchpad and keyboard for a Linux laptop (developed on Linux Mint, Cinnamon, X11). A
+A phone as touchpad and keyboard for a Linux laptop (developed on Linux Mint, Cinnamon, X11). A
 Python server (aiohttp) serves a no-build web app and turns WebSocket messages into input
 events (uinput pointer, XTest keyboard). Main use: from the sofa, with the laptop on the TV.
 

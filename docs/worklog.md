@@ -15,7 +15,7 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
   - name `phonepad`
   - decisions in ADR-0002 to ADR-0008
 - Pairing became "one-time code, then device token" (ADR-0004), because iOS home-screen apps
-  do not share storage with Safari.
+  do not share storage with the browser.
 - Installed only into the conda env `phonepad` and the repo's `node_modules`. The owner asked
   for no system changes without approval, so the udev and ufw steps are in
   `scripts/setup-system.sh` for the user to run.
@@ -51,7 +51,7 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
     token, storage fallback in memory, sentinel written as an escape, setup script subnet and
     `--remove` fixes, `import-environment` in autostart, no endless restarts on bad settings.
   - Recorded instead of fixed: per-profile trust and the weak host model (ADR-0005), Backspace
-    per grapheme vs terminals and Safari's 7-day storage eviction (README "Known
+    per grapheme vs terminals and the browser's storage eviction on iOS (README "Known
     limitations"), iOS behaviour to check on the device (STATE.md).
 - Found while fixing: aiohttp may cancel a session handler when the phone disconnects, which
   skipped the button release; the release now runs in its own task.
@@ -64,7 +64,7 @@ verified, review outcomes, anything left open. Decisions get an ADR; this log li
 
 ## 2026-11-20 — first real use, publication
 
-- The owner set it up and used it on the iPhone (Safari and home-screen app): works.
+- The owner set it up and used it on the iPhone (Vivaldi and home-screen app): works.
 - Prepared the repo for a public GitHub repository:
   - MIT license (copyright in the owner's name)
   - neutral wording instead of personal names in the docs

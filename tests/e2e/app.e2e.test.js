@@ -1,6 +1,7 @@
 // End-to-end: real server (loopback only, input recorded to a file, temporary state dirs) and
-// headless Chrome emulating an iPhone with touch. Needs Chrome (CHROME_PATH, default
-// /usr/bin/google-chrome) and the Python package (PYTHON, default "python"). Run: make e2e
+// headless Chrome emulating phones (iPhone, Android) with touch. Needs Chrome (CHROME_PATH,
+// default /usr/bin/google-chrome) and the Python package (PYTHON, default "python").
+// Run: make e2e
 
 import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
@@ -247,4 +248,28 @@ test("revoking a device sends it back to pairing", { skip }, async () => {
   cli("revoke", "--all");
   await page.waitForSelector("#pairing:not([hidden])", { timeout: 8000 });
   assert.equal(await statusText(), "Not paired");
+});
+
+test("an Android phone (emulated) pairs and clicks", { skip }, async () => {
+  const android = await browser.newPage();
+  await android.emulate(KnownDevices["Pixel 5"]);
+  android.on("pageerror", (e) => assert.fail(`page error: ${e}`));
+  const code = newPairingCode();
+  await android.goto(`${url}#code=${code}`);
+  await until(
+    () => android.$eval("#status-text", (el) => el.textContent === "Connected"),
+    "Android connected",
+  );
+  assert.match(cli("devices"), /Android \(browser, /);
+  const before = events().length;
+  const box = await (await android.$("#pad")).boundingBox();
+  await android.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  await until(() => events().length >= before + 2, "click from Android");
+  assert.deepEqual(
+    events()
+      .slice(before)
+      .map((e) => e.pressed),
+    [true, false],
+  );
+  await android.close();
 });

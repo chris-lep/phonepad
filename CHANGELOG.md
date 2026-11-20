@@ -10,10 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 ### Added
 
-- Touchpad web app for the iPhone: pointer with adjustable speed and acceleration, tap to
+- Touchpad web app for the phone's browser: pointer with adjustable speed and acceleration, tap to
   click, tap-then-touch to drag, two-finger scroll (natural by default) and right-click, L/R
   buttons.
-- Live typing with the iPhone keyboard (autocorrect and dictation included) and special keys
+- Live typing with the phone's keyboard (autocorrect and dictation included) and special keys
   (Esc, Tab, arrows, Backspace, Enter), any Unicode character on any keyboard layout.
 - Pairing with a one-time code or QR code; per-device tokens; `phonepad devices` / `revoke`.
 - Trusted networks (`phonepad trust`): the server listens on the LAN only there.

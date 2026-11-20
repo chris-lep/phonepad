@@ -107,9 +107,9 @@ def cmd_pair(args: argparse.Namespace) -> int:
             segno.make(url, error="m").terminal(compact=True)
         except Exception:
             pass
-        print(f"\nScan the QR code with the iPhone camera, or open {url.split('#')[0]}")
-        print("For the home-screen app: Safari > Share > Add to Home Screen, open it and")
-        print("enter the code there.")
+        print(f"\nScan the QR code with the phone's camera, or open {url.split('#')[0]}")
+        print("Home-screen app on an iPhone: share menu > Add to Home Screen, then open it and")
+        print("enter the code there (it does not share the browser's pairing).")
     print(f"\n  Pairing code: {code}   (valid {minutes} minutes, one phone)\n")
     return 0
 
@@ -230,7 +230,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="phonepad", description="Use an iPhone as touchpad and keyboard for this laptop."
+        prog="phonepad", description="Use a phone as touchpad and keyboard for this laptop."
     )
     parser.add_argument("--version", action="version", version=f"phonepad {__version__}")
     parser.add_argument(
