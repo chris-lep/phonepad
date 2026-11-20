@@ -26,9 +26,8 @@ Requirements and behaviour: [docs/SPEC.md](docs/SPEC.md). Why it is built this w
   the Python headers (Debian/Ubuntu: `sudo apt install build-essential python3-dev python3-venv`),
   or use conda, which brings the headers.
 - A phone with a current browser on the same network. Tested on an iPhone with Vivaldi, in
-  the browser and as a home-screen app (all iOS browsers use the same engine, WebKit). Android
-  browsers use the same web standards and should work, but have not been tested yet; reports
-  are welcome.
+  the browser and as a home-screen app. Android browsers use the same web standards and should
+  work, but have not been tested yet; reports are welcome.
 
 ## Setup
 
