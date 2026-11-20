@@ -96,8 +96,8 @@ remembers the address.
 
 The phone stays paired. It is connected while the app is open and reconnects by itself
 within about a second when you open it again (phones close the connection when they lock or
-the browser goes to the background). It cannot connect while the laptop sleeps or is on a
-network you have not trusted. The phone's screen may auto-lock while you use the touchpad;
+the browser goes to the background). It cannot connect while the laptop is on a network you
+have not trusted. The phone's screen may auto-lock while you use the touchpad;
 raise Auto-Lock in the phone's settings if that bothers you.
 
 ## Commands
