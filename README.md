@@ -44,7 +44,7 @@ With conda instead: `conda create -n phonepad python=3.12 && conda activate phon
 
 ### 2. System setup (once, needs sudo)
 
-Either run the script (read it first; it prints what it does):
+Either run the script:
 
 ```bash
 sudo scripts/setup-system.sh          # undo: sudo scripts/setup-system.sh --remove
