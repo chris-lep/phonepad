@@ -1,0 +1,16 @@
+{
+  "name": "phonepad",
+  "private": true,
+  "description": "Dev tooling for the phonepad frontend (lint, format, tests). Runtime needs no Node.",
+  "type": "module",
+  "scripts": {
+    "check": "biome ci .",
+    "fmt": "biome check --write .",
+    "test": "node --test \"tests/js/*.test.js\"",
+    "e2e": "node --test --test-concurrency=1 \"tests/e2e/*.test.js\""
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.8",
+    "puppeteer-core": "^24.43.1"
+  }
+}

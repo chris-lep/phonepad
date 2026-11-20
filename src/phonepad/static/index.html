@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <title>phonepad</title>
+    <meta name="description" content="Touchpad and keyboard for the laptop" />
+    <meta name="theme-color" content="#0e1116" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="phonepad" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/static/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+    <link rel="stylesheet" href="/static/css/style.css" />
+    <script type="module" src="/static/js/main.js"></script>
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="bar">
+        <button id="status" class="status" type="button" data-status="connecting">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="status-text">Connecting…</span>
+        </button>
+        <div class="bar-actions">
+          <button id="keyboard-toggle" class="icon-button" type="button" aria-label="Keyboard" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6 13.5h.01M18 13.5h.01M9 14.5h6" /></svg>
+          </button>
+          <button id="settings-toggle" class="icon-button" type="button" aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8" /><circle cx="16" cy="7" r="2" /><circle cx="10" cy="17" r="2" /></svg>
+          </button>
+        </div>
+      </header>
+
+      <main id="pad" class="pad" aria-label="Touchpad">
+        <p id="pad-hint" class="pad-hint">
+          Move with one finger · tap to click<br />
+          Two fingers: scroll · tap for right-click<br />
+          Tap, then touch again to drag
+        </p>
+      </main>
+
+      <section id="keyboard" class="keyboard" hidden>
+        <input
+          id="type-field"
+          class="type-field"
+          type="text"
+          enterkeyhint="send"
+          autocomplete="off"
+          aria-label="Type on the laptop"
+        />
+        <fieldset class="keys" aria-label="Special keys">
+          <button type="button" data-key="escape">Esc</button>
+          <button type="button" data-key="tab">Tab</button>
+          <button type="button" data-key="left" aria-label="Left">←</button>
+          <button type="button" data-key="up" aria-label="Up">↑</button>
+          <button type="button" data-key="down" aria-label="Down">↓</button>
+          <button type="button" data-key="right" aria-label="Right">→</button>
+          <button type="button" data-key="backspace" aria-label="Backspace">⌫</button>
+          <button type="button" data-key="enter" aria-label="Enter">⏎</button>
+        </fieldset>
+      </section>
+
+      <footer id="buttons" class="buttons">
+        <button type="button" data-button="left" aria-label="Left button">L</button>
+        <button type="button" data-button="right" aria-label="Right button">R</button>
+      </footer>
+    </div>
+
+    <section id="pairing" class="sheet" hidden>
+      <div class="sheet-body">
+        <h1>Pair this phone</h1>
+        <p>On the laptop, run <code>phonepad pair</code> and enter the code it shows.</p>
+        <form id="pair-form" class="pair-form" novalidate>
+          <input
+            id="pair-code"
+            class="code-input"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            maxlength="7"
+            placeholder="123 456"
+            aria-label="Pairing code"
+          />
+          <button type="submit" class="primary">Pair</button>
+        </form>
+        <p id="pair-error" class="error" role="alert"></p>
+      </div>
+    </section>
+
+    <section id="settings" class="sheet" hidden>
+      <div class="sheet-body">
+        <div class="sheet-head">
+          <h1>Settings</h1>
+          <button id="settings-close" type="button" class="primary">Done</button>
+        </div>
+        <label class="row">
+          <span>Pointer speed <output data-for="speed"></output></span>
+          <input type="range" data-setting="speed" />
+        </label>
+        <label class="row">
+          <span>Acceleration <output data-for="acceleration"></output></span>
+          <input type="range" data-setting="acceleration" />
+        </label>
+        <label class="row">
+          <span>Scroll speed <output data-for="scrollSpeed"></output></span>
+          <input type="range" data-setting="scrollSpeed" />
+        </label>
+        <label class="row toggle">
+          <span>Natural scrolling</span>
+          <input type="checkbox" data-setting="naturalScroll" />
+        </label>
+        <label class="row toggle">
+          <span>Tap and drag</span>
+          <input type="checkbox" data-setting="tapDrag" />
+        </label>
+        <label class="row toggle">
+          <span>Autocorrect while typing</span>
+          <input type="checkbox" data-setting="autocorrect" />
+        </label>
+        <button id="unpair" type="button" class="danger">Unpair this phone</button>
+        <p id="about" class="about"></p>
+      </div>
+    </section>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+  </body>
+</html>

@@ -1,0 +1,25 @@
+# Uses the tools installed in the dev environment (no hook downloads).
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: ruff format --check
+        language: system
+        types: [python]
+      - id: ruff-lint
+        name: ruff check
+        entry: ruff check
+        language: system
+        types: [python]
+      - id: mypy
+        name: mypy
+        entry: mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+      - id: biome
+        name: biome
+        entry: npx biome ci --no-errors-on-unmatched
+        language: system
+        types_or: [javascript, css, json]

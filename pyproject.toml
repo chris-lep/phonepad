@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "phonepad"
+dynamic = ["version"]
+description = "Use an iPhone as touchpad and keyboard for a Linux laptop (local web app)."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Christopher Lepenik" }]
+dependencies = [
+  "aiohttp>=3.10",     # HTTP + WebSocket server
+  "evdev>=1.7",        # uinput virtual pointer
+  "python-xlib>=0.33", # XTest keyboard (and pointer fallback)
+  "segno>=1.6",        # pairing QR code in the terminal
+]
+classifiers = [
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3",
+  "Environment :: Web Environment",
+  "Operating System :: POSIX :: Linux",
+]
+
+[project.scripts]
+phonepad = "phonepad.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "pytest-aiohttp>=1.0", "ruff>=0.8", "mypy>=1.13", "pre-commit>=4.0"]
+
+[tool.hatch.version]
+path = "src/phonepad/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/phonepad"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "N", "PTH", "RUF", "C4", "PIE", "RET"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = ["xserver: needs a throwaway X server in PHONEPAD_TEST_DISPLAY (never the real one)"]
+
+[tool.mypy]
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["Xlib", "Xlib.*", "segno"]
+ignore_missing_imports = true
